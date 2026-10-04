@@ -3,10 +3,11 @@
 </p>
 
 <p align="center">
-  <a href="#using-it-planned"><img alt="Python 3.12+" src="https://img.shields.io/badge/python-3.12%2B-F6B93B?style=flat-square&labelColor=0E1A2B&logo=python&logoColor=FFF6E5"></a>
+  <a href="#quick-start"><img alt="Python 3.12+" src="https://img.shields.io/badge/python-3.12%2B-F6B93B?style=flat-square&labelColor=0E1A2B&logo=python&logoColor=FFF6E5"></a>
   <a href="LICENSE"><img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-3DDC97?style=flat-square&labelColor=0E1A2B"></a>
-  <a href="#roadmap"><img alt="Status: design phase" src="https://img.shields.io/badge/status-design%20phase-E8473F?style=flat-square&labelColor=0E1A2B"></a>
+  <a href="#roadmap"><img alt="Status: v0.1 foundation" src="https://img.shields.io/badge/status-v0.1%20foundation-E8473F?style=flat-square&labelColor=0E1A2B"></a>
   <a href="#how-it-works"><img alt="AI: none" src="https://img.shields.io/badge/AI-none-5BC0EB?style=flat-square&labelColor=0E1A2B"></a>
+  <a href="https://github.com/DeanT-04/crisp/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/DeanT-04/crisp/actions/workflows/ci.yml/badge.svg"></a>
 </p>
 
 <p align="center">
@@ -20,9 +21,9 @@
 > **Why "crisp"?** Because a blurry drawing should come out crisp. And because a crisp (a potato chip, if you're American) is a snack made of nothing but sharp edges. The mascot crunches blurry pixels so you don't have to squint at them.
 
 > [!NOTE]
-> **Status: v0.0 — design phase, nothing runs yet.** The design spec is written and under review in [`docs/superpowers/specs/2026-10-04-crisp-design.md`](docs/superpowers/specs/2026-10-04-crisp-design.md). No engine code, CLI or benchmark exists yet. Everything below describes the plan, not shipped features.
+> **Status: v0.1 — foundation: CLI and benchmark work; output is not yet sharper than standard resizing.** The command line, folder and PDF handling, and the benchmark harness are built and tested. Only the baseline engine exists (Lanczos resampling in linear light), so a 4× result looks like any other resizer's. The line-art engine that is meant to beat it is milestone M2, and the benchmark is how we will show whether it does. Design: [`docs/superpowers/specs/2026-10-04-crisp-design.md`](docs/superpowers/specs/2026-10-04-crisp-design.md).
 
-## What it will do
+## What it is meant to do
 
 - **Rebuild drawings instead of stretching them.** It measures the blur from the drawing's own straight edges, undoes it, and redraws lines and text at the new size.
 - **Re-render PDFs exactly.** If a PDF still holds its original vector lines, crisp redraws them at any resolution with no guessing.
@@ -36,7 +37,7 @@
   <tr>
     <td width="33%" valign="top">
       <h3>Vector PDF re-render</h3>
-      PDFs exported from CAD often still contain their vector lines. crisp detects that and redraws the page at the resolution you ask for.<br><br><sub><b>Planned · P1</b></sub>
+      PDFs exported from CAD often still contain their vector lines. crisp detects that and redraws the page at the resolution you ask for.<br><br><sub><b>Available</b></sub>
     </td>
     <td width="33%" valign="top">
       <h3>Line-art rebuild</h3>
@@ -44,13 +45,13 @@
     </td>
     <td width="33%" valign="top">
       <h3>Batch CLI</h3>
-      Point it at files or folders and pick a scale, a DPI, or a paper size. Originals are never overwritten.<br><br><sub><b>Planned · P1</b></sub>
+      Point it at files or folders and pick a scale, a DPI, or a paper size. Originals are never overwritten.<br><br><sub><b>Available</b></sub>
     </td>
   </tr>
   <tr>
     <td width="33%" valign="top">
       <h3>Benchmark report</h3>
-      Scores crisp against bicubic, Lanczos and a leading AI upscaler on text legibility, edge accuracy, PSNR, SSIM and speed.<br><br><sub><b>Planned · P1</b></sub>
+      Scores crisp against bicubic, Lanczos and a leading AI upscaler on text legibility, edge accuracy, PSNR, SSIM and speed.<br><br><sub><b>Available · AI comparator optional, text legibility needs Tesseract</b></sub>
     </td>
     <td width="33%" valign="top">
       <h3>Faithfulness check</h3>
@@ -77,26 +78,29 @@
   </tr>
 </table>
 
-## Using it (planned)
+## Quick start
 
-None of these commands work yet. This is the interface the design commits to.
+**You need:** [Python 3.12+](https://www.python.org/downloads/) and [uv](https://docs.astral.sh/uv/). The benchmark's text-legibility score also needs [Tesseract](https://github.com/tesseract-ocr/tesseract); without it that column shows N/A.
 
 ```bash
-# 1. Upscale one drawing 4×  (writes drawing@4x.png next to the original)
+# 1. Install the command
+uv tool install git+https://github.com/DeanT-04/crisp
+
+# 2. Upscale one drawing 4x (writes drawing@4x.png next to the original)
 crisp drawing.png --scale 4
 
-# 2. Upscale a whole folder into another folder
+# 3. Upscale a whole folder into another folder
 crisp ./scans/ --scale 4 --out ./sharp/
 
-# 3. Re-render a CAD PDF at 600 DPI
+# 4. Re-render a CAD PDF at 600 DPI, or fit an image to A3 at 300 DPI
 crisp plan.pdf --dpi 600
+crisp drawing.png --size A3@300
 
-# 4. Also write a vector SVG for clean line art
-crisp part.jpg --scale 8 --vector svg
-
-# 5. Run the benchmark and open the report
-crisp bench
+# 5. Run the benchmark and open the report (from a clone of this repo)
+crisp bench --quick
 ```
+
+Folders are scanned one level deep; add `--recursive` to go further. crisp never overwrites a source file and skips outputs that already exist unless you pass `--overwrite`. SVG/PDF output (`--vector`) is planned, not built.
 
 ## How it works
 
@@ -132,7 +136,7 @@ No algorithm can bring back information the image no longer holds. Text that was
 ## Roadmap
 
 - [x] Design spec
-- [ ] M1 — Foundation: intake, PDF re-render, write, batch CLI, baseline engine, benchmark harness
+- [x] M1 — Foundation: intake, PDF re-render, write, batch CLI, baseline engine, benchmark harness
 - [ ] M2 — Line-art engine, content analysis, faithfulness check with fallback
 - [ ] M3 — Restore stage: JPEG deblocking, denoise, deskew, lighting
 - [ ] M4 — Continuous-tone engine, mixed-region routing, tiling for huge images

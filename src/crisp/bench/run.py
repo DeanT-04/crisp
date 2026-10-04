@@ -29,7 +29,7 @@ class Config:
 
 
 QUICK = Config("quick", 4, (256, 192), (2, 4), ("clean", "blur"), ocr=False, ai=False)
-FULL = Config("full", 24, (512, 384), (2, 4, 8), ("clean", "blur", "jpeg", "scan"), True, True)
+FULL = Config("full", 6, (512, 384), (2, 4, 8), ("clean", "blur", "jpeg", "scan"), True, True)
 
 
 @dataclass(frozen=True)
