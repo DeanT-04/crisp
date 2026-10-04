@@ -63,3 +63,17 @@ def test_recursive_out_mirrors_folders(tmp_path):  # RF2
     items = discover_inputs([tmp_path / "in"], recursive=True)
     process_batch(items, TargetSpec("scale", scale=2), Options(out_dir=tmp_path / "o"))
     assert (tmp_path / "o/x/a@2x.png").exists() and (tmp_path / "o/y/a@2x.png").exists()
+
+
+def test_shell_expanded_glob_drops_crisp_outputs_with_their_source(tree):
+    items = discover_inputs([tree / "a.png", tree / "a@2x.png", tree / "b.JPG"])
+    assert names(items) == ["a.png", "b.JPG"]
+
+
+def test_same_stem_sources_do_not_collide(tmp_path):
+    for name in ("a.png", "a.jpg"):
+        Image.new("L", (4, 4)).save(tmp_path / name)
+    items = discover_inputs([tmp_path / "a.png", tmp_path / "a.jpg"])
+    s = process_batch(items, TargetSpec("scale", scale=2))
+    assert s.counts() == {"done": 2, "skipped": 0, "failed": 0}
+    assert (tmp_path / "a.png@2x.png").exists() and (tmp_path / "a.jpg@2x.png").exists()

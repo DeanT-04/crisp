@@ -86,3 +86,20 @@ def tiny_quick(monkeypatch):
     from tests.helpers import TINY
 
     monkeypatch.setattr(bench_run, "QUICK", TINY)
+
+
+@pytest.fixture
+def ocr_pdf(tmp_path) -> Path:
+    """A scan (image covering the page) plus an invisible OCR text layer."""
+    from reportlab.lib.utils import ImageReader
+
+    img = Image.new("RGB", (800, 600), (200, 30, 30))
+    c = _canvas(p := tmp_path / "ocr.pdf", pagesize=(400, 300))
+    c.drawImage(ImageReader(img), 0, 0, 400, 300)
+    text = c.beginText(50, 50)
+    text.setTextRenderMode(3)
+    text.textLine("hidden ocr text " * 8)
+    c.drawText(text)
+    c.showPage()
+    c.save()
+    return p

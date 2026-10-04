@@ -25,3 +25,8 @@ def test_pages_split(two_page_pdf):
 def test_password_protected(encrypted_pdf):
     with pytest.raises(UnsupportedInput, match="password-protected"):
         open_file(encrypted_pdf)
+
+
+def test_invisible_ocr_text_does_not_make_a_scan_vector(ocr_pdf):
+    [page] = open_file(ocr_pdf)
+    assert not page.has_vectors and page.raster.pixels.shape == (600, 800, 3)

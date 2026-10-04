@@ -54,6 +54,12 @@ def _open_pdf(path: Path) -> list[Page]:
         pdf.close()
 
 
+def _invisible_text(obj) -> bool:
+    """OCR layers are invisible text (render mode 3) and do not make a page vector."""
+    mode = pdfium_c.FPDFTextObj_GetTextRenderMode(obj.raw)
+    return mode == pdfium_c.FPDF_TEXTRENDERMODE_INVISIBLE
+
+
 def _pdf_page(path: Path, pdf: pdfium.PdfDocument, index: int, count: int) -> Page:
     page = pdf[index]
     width, height = page.get_size()
@@ -68,8 +74,10 @@ def _pdf_page(path: Path, pdf: pdfium.PdfDocument, index: int, count: int) -> Pa
             image_cov += w * h
             if largest is None or w * h > largest[0]:
                 largest = (w * h, obj, right - left)
-        elif obj.type in (pdfium_c.FPDF_PAGEOBJ_PATH, pdfium_c.FPDF_PAGEOBJ_TEXT):
+        elif obj.type == pdfium_c.FPDF_PAGEOBJ_PATH:
             other_cov += w * h
+        elif obj.type == pdfium_c.FPDF_PAGEOBJ_TEXT:
+            other_cov += 0.0 if _invisible_text(obj) else w * h
     image_only = area > 0 and image_cov / area >= 0.9 and other_cov / area < 0.01
     if image_only and largest is not None:
         _, obj, bounds_width = largest

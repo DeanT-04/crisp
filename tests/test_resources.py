@@ -19,3 +19,9 @@ def test_memory(tmp_path):
 def test_disk(tmp_path):
     with pytest.raises(ResourceError, match="disk"):
         check_resources(T1000, 3, tmp_path, available_ram=10**12, free_disk=100)
+
+
+def test_ram_allowance_is_shared_between_workers(tmp_path):
+    check_resources(T1000, 3, tmp_path, available_ram=10**9, free_disk=10**12, workers=1)
+    with pytest.raises(ResourceError, match="memory"):
+        check_resources(T1000, 3, tmp_path, available_ram=10**9, free_disk=10**12, workers=8)

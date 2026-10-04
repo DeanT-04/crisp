@@ -55,7 +55,27 @@ def discover_inputs(paths: list[Path], recursive: bool = False) -> list[InputIte
         if key not in seen:
             seen.add(key)
             unique.append(item)
-    return unique
+    return _drop_outputs_of_present_sources(unique)
+
+
+def _drop_outputs_of_present_sources(items: list[InputItem]) -> list[InputItem]:
+    """A shell-expanded glob also lists earlier crisp outputs; drop those whose source is given."""
+    sources = {(i.path.resolve().parent, i.path.stem.lower()) for i in items}
+    kept = []
+    for item in items:
+        m = OUTPUT_PATTERN.search(item.path.stem)
+        if m and (item.path.resolve().parent, item.path.stem[: m.start()].lower()) in sources:
+            continue
+        kept.append(item)
+    return kept
+
+
+def _colliding_sources(items: list[InputItem], out_dir: Path | None) -> frozenset[Path]:
+    groups: dict[tuple[Path, str], set[Path]] = {}
+    for i in items:
+        folder = out_dir / i.rel_parent if out_dir is not None else i.path.parent
+        groups.setdefault((folder.resolve(), i.path.stem.lower()), set()).add(i.path.resolve())
+    return frozenset(p for group in groups.values() if len(group) > 1 for p in group)
 
 
 def _worker(item: InputItem, spec: TargetSpec, options: Options) -> FileOutcome:
@@ -69,7 +89,12 @@ def process_batch(
     jobs: int = 1,
     on_done: Callable[[FileOutcome], None] | None = None,
 ) -> BatchSummary:
-    options = replace(options, protected=frozenset(i.path.resolve() for i in items))
+    options = replace(
+        options,
+        protected=frozenset(i.path.resolve() for i in items),
+        disambiguate=_colliding_sources(items, options.out_dir),
+        jobs=max(1, min(jobs, len(items))),
+    )
     outcomes: list[FileOutcome | None] = [None] * len(items)
     if jobs <= 1 or len(items) <= 1:
         for i, item in enumerate(items):

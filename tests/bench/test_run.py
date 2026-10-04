@@ -30,7 +30,7 @@ def test_compare_directions():
 
 
 def test_compare_ignores_other_methods_seconds_and_missing_keys():
-    base = {"2/clean/lanczos/psnr": 30.0, "2/clean/crisp/seconds": 1.0, "2/clean/crisp/ssim": 0.9}
+    base = {"2/clean/lanczos/psnr": 30.0, "2/clean/crisp/seconds": 1.0}
     assert compare({"2/clean/lanczos/psnr": 10.0, "2/clean/crisp/seconds": 99.0}, base) == []
     assert Regression("k", 1.0, 0.5).key == "k"
 
@@ -41,3 +41,9 @@ def test_baseline_roundtrip_keeps_other_sections(tmp_path):
     save_baseline(p, "quick", {"k": 2.0})
     assert load_baseline(p) == {"full": {"k": 1.0}, "quick": {"k": 2.0}}
     assert load_baseline(tmp_path / "missing.json") == {}
+
+
+def test_compare_flags_a_metric_that_disappeared():
+    base = {"2/clean/crisp/edge_error": 1.0}
+    [reg] = compare({}, base)
+    assert reg.key == "2/clean/crisp/edge_error" and math.isnan(reg.current)

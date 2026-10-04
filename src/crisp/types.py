@@ -59,6 +59,8 @@ class Options:
     out_dir: Path | None = None
     overwrite: bool = False
     protected: frozenset[Path] = frozenset()  # resolved input paths that must never be written
+    disambiguate: frozenset[Path] = frozenset()  # sources whose output name keeps their suffix
+    jobs: int = 1  # parallel workers sharing the memory allowance
 
 
 @dataclass

@@ -61,7 +61,13 @@ def _process_page(
         target = resolve_target(spec, page)
         result.target = target
         out = output_path(
-            page.source, page.index, page.page_count, target.label, options.out_dir, rel_parent
+            page.source,
+            page.index,
+            page.page_count,
+            target.label,
+            options.out_dir,
+            rel_parent,
+            keep_suffix=self_path in options.disambiguate,
         )
         result.output = out
         resolved = out.resolve()
@@ -72,7 +78,7 @@ def _process_page(
             result.reason = "output exists"
         else:
             channels = page.raster.pixels.shape[2] if page.raster is not None else 3
-            check_resources(target, channels, out.parent)
+            check_resources(target, channels, out.parent, workers=options.jobs)
             raster, engine = upscale_page(page, target)
             write_png(raster, out, target.out_dpi)
             result.status = "done"

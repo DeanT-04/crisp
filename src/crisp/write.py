@@ -25,9 +25,11 @@ def output_path(
     label: str,
     out_dir: Path | None,
     rel_parent: Path = Path(),
+    keep_suffix: bool = False,
 ) -> Path:
     page_part = f"-p{page_index + 1}" if page_count > 1 else ""
-    name = f"{source.stem}{page_part}@{label}.png"
+    stem = source.name if keep_suffix else source.stem  # a.png + a.jpg -> a.png@2x.png
+    name = f"{stem}{page_part}@{label}.png"
     folder = out_dir / rel_parent if out_dir is not None else source.parent
     return folder / name
 

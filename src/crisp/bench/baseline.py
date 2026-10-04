@@ -39,9 +39,14 @@ def compare(
     regressions = []
     for key, base in baseline_section.items():
         parts = key.split("/")
-        if len(parts) != 4 or parts[2] != method or key not in agg:
+        if len(parts) != 4 or parts[2] != method:
             continue
         metric = parts[3].split("@")[0]
+        if metric in _HIGHER_IS_BETTER | {"edge_error", "stroke_width_error"} and key not in agg:
+            regressions.append(Regression(key, base, float("nan")))  # metric disappeared
+            continue
+        if key not in agg:
+            continue
         current = agg[key]
         if metric in _HIGHER_IS_BETTER:
             worse = current < base - TOLERANCES[metric]
