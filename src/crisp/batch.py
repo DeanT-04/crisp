@@ -77,7 +77,7 @@ def process_batch(
             if on_done:
                 on_done(outcomes[i])
     else:
-        with ProcessPoolExecutor(max_workers=jobs) as pool:
+        with ProcessPoolExecutor(max_workers=min(jobs, len(items))) as pool:
             futures = {pool.submit(_worker, item, spec, options): i for i, item in enumerate(items)}
             for future in as_completed(futures):
                 i = futures[future]
