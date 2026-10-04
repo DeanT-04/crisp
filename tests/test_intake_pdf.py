@@ -1,0 +1,27 @@
+import pytest
+
+from crisp.intake import open_file
+from crisp.types import UnsupportedInput
+
+
+def test_vector_page(vector_pdf):
+    [page] = open_file(vector_pdf)
+    assert page.has_vectors and page.raster is None and page.dpi == 72.0
+    assert page.size_pt == pytest.approx((595.28, 841.89), abs=0.1)
+    assert page.size_px == (595, 842) and page.source_format == "pdf"
+
+
+def test_image_only_page(image_pdf):
+    [page] = open_file(image_pdf)
+    assert not page.has_vectors and page.raster.pixels.shape == (600, 800, 3)
+    assert page.dpi == pytest.approx(144, abs=0.5)
+
+
+def test_pages_split(two_page_pdf):
+    pages = open_file(two_page_pdf)
+    assert [p.index for p in pages] == [0, 1] and pages[1].page_count == 2
+
+
+def test_password_protected(encrypted_pdf):
+    with pytest.raises(UnsupportedInput, match="password-protected"):
+        open_file(encrypted_pdf)

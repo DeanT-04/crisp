@@ -27,3 +27,54 @@ def make_page():
         return Page(Path("x.png"), 0, 1, raster, dpi, False, None, "png")
 
     return fn
+
+
+def _canvas(path, pagesize=None, **kwargs):
+    from reportlab.lib.pagesizes import A4
+    from reportlab.pdfgen import canvas
+
+    return canvas.Canvas(str(path), pagesize=pagesize or A4, **kwargs)
+
+
+def _draw_vector_page(c):
+    c.line(50, 50, 500, 700)
+    c.rect(100, 100, 300, 200)
+    c.drawString(120, 400, "100 mm")
+    c.showPage()
+
+
+@pytest.fixture
+def vector_pdf(tmp_path) -> Path:
+    c = _canvas(p := tmp_path / "vector.pdf")
+    _draw_vector_page(c)
+    c.save()
+    return p
+
+
+@pytest.fixture
+def two_page_pdf(tmp_path) -> Path:
+    c = _canvas(p := tmp_path / "two.pdf")
+    _draw_vector_page(c)
+    _draw_vector_page(c)
+    c.save()
+    return p
+
+
+@pytest.fixture
+def image_pdf(tmp_path) -> Path:
+    from reportlab.lib.utils import ImageReader
+
+    img = Image.new("RGB", (800, 600), (200, 30, 30))
+    c = _canvas(p := tmp_path / "image.pdf", pagesize=(400, 300))
+    c.drawImage(ImageReader(img), 0, 0, 400, 300)
+    c.showPage()
+    c.save()
+    return p
+
+
+@pytest.fixture
+def encrypted_pdf(tmp_path) -> Path:
+    c = _canvas(p := tmp_path / "locked.pdf", encrypt="secret")
+    _draw_vector_page(c)
+    c.save()
+    return p

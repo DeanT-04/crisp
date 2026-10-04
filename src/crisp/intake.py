@@ -5,6 +5,8 @@ from __future__ import annotations
 from pathlib import Path
 
 import numpy as np
+import pypdfium2 as pdfium
+import pypdfium2.raw as pdfium_c
 from PIL import Image, ImageOps, ImageSequence
 
 from crisp.types import Page, Raster, UnsupportedInput
@@ -37,7 +39,49 @@ def open_file(path: Path) -> list[Page]:
 
 
 def _open_pdf(path: Path) -> list[Page]:
-    raise NotImplementedError
+    try:
+        pdf = pdfium.PdfDocument(path)
+    except pdfium.PdfiumError as e:
+        if "password" in str(e).lower():
+            raise UnsupportedInput("password-protected PDF") from e
+        raise UnsupportedInput(f"could not read PDF: {e}") from e
+    try:
+        count = len(pdf)
+        if count == 0:
+            raise UnsupportedInput("PDF has no pages")
+        return [_pdf_page(path, pdf, i, count) for i in range(count)]
+    finally:
+        pdf.close()
+
+
+def _pdf_page(path: Path, pdf: pdfium.PdfDocument, index: int, count: int) -> Page:
+    page = pdf[index]
+    width, height = page.get_size()
+    area = width * height
+    image_cov = other_cov = 0.0
+    largest = None  # (area, object)
+    for obj in page.get_objects(max_depth=15):
+        left, bottom, right, top = obj.get_bounds()
+        w = max(0.0, min(right, width) - max(left, 0.0))
+        h = max(0.0, min(top, height) - max(bottom, 0.0))
+        if obj.type == pdfium_c.FPDF_PAGEOBJ_IMAGE:
+            image_cov += w * h
+            if largest is None or w * h > largest[0]:
+                largest = (w * h, obj, right - left)
+        elif obj.type in (pdfium_c.FPDF_PAGEOBJ_PATH, pdfium_c.FPDF_PAGEOBJ_TEXT):
+            other_cov += w * h
+    image_only = area > 0 and image_cov / area >= 0.9 and other_cov / area < 0.01
+    if image_only and largest is not None:
+        _, obj, bounds_width = largest
+        try:
+            pil = obj.get_bitmap(render=False).to_pil()
+        except Exception:  # exotic filters: fall back to rendering the page directly
+            pil = None
+        if pil is not None:
+            raster = _to_raster(pil)
+            dpi = raster.pixels.shape[1] / (bounds_width / 72.0) if bounds_width > 0 else None
+            return Page(path, index, count, raster, dpi, False, None, "pdf")
+    return Page(path, index, count, None, 72.0, True, (width, height), "pdf")
 
 
 def _open_raster(path: Path) -> list[Page]:
