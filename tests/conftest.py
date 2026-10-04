@@ -78,3 +78,11 @@ def encrypted_pdf(tmp_path) -> Path:
     _draw_vector_page(c)
     c.save()
     return p
+
+
+@pytest.fixture
+def tiny_quick(monkeypatch):
+    import crisp.bench.run as bench_run
+    from tests.helpers import TINY
+
+    monkeypatch.setattr(bench_run, "QUICK", TINY)
