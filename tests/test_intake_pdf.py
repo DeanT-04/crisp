@@ -30,3 +30,11 @@ def test_password_protected(encrypted_pdf):
 def test_invisible_ocr_text_does_not_make_a_scan_vector(ocr_pdf):
     [page] = open_file(ocr_pdf)
     assert not page.has_vectors and page.raster.pixels.shape == (600, 800, 3)
+
+
+def test_rotated_scan_is_extracted_upright(rotated_scan_pdf):
+    [page] = open_file(rotated_scan_pdf)
+    assert not page.has_vectors and page.raster.pixels.shape == (800, 600, 3)
+    assert page.dpi == pytest.approx(144, abs=0.5)
+    # Rotated 90 degrees clockwise: the scan's white top band is now on the right.
+    assert page.raster.pixels[:, -50:].mean() > 0.9 and page.raster.pixels[:, :50].mean() < 0.1

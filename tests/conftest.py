@@ -103,3 +103,22 @@ def ocr_pdf(tmp_path) -> Path:
     c.showPage()
     c.save()
     return p
+
+
+@pytest.fixture
+def rotated_scan_pdf(tmp_path) -> Path:
+    """A landscape scan (white band along its top) on a page with /Rotate 90."""
+    import pypdfium2 as pdfium
+    from reportlab.lib.utils import ImageReader
+
+    img = Image.new("RGB", (800, 600), (0, 0, 0))
+    img.paste((255, 255, 255), (0, 0, 800, 100))
+    c = _canvas(src := tmp_path / "landscape.pdf", pagesize=(400, 300))
+    c.drawImage(ImageReader(img), 0, 0, 400, 300)
+    c.showPage()
+    c.save()
+    pdf = pdfium.PdfDocument(src)
+    pdf[0].set_rotation(90)
+    pdf.save(p := tmp_path / "rotated.pdf")
+    pdf.close()
+    return p

@@ -27,6 +27,12 @@ _FORMATS = {
     "WEBP": "webp",
 }
 _MIN_DPI = 20.0
+# /Rotate is clockwise; PIL's transpose constants rotate counter-clockwise.
+_UPRIGHT = {
+    90: Image.Transpose.ROTATE_270,
+    180: Image.Transpose.ROTATE_180,
+    270: Image.Transpose.ROTATE_90,
+}
 
 
 def open_file(path: Path) -> list[Page]:
@@ -62,7 +68,10 @@ def _invisible_text(obj) -> bool:
 
 def _pdf_page(path: Path, pdf: pdfium.PdfDocument, index: int, count: int) -> Page:
     page = pdf[index]
-    width, height = page.get_size()
+    size_pt = page.get_size()  # as displayed, i.e. after /Rotate
+    rotation = page.get_rotation()
+    # Object bounds are in unrotated page space, so measure coverage there.
+    width, height = size_pt[::-1] if rotation in (90, 270) else size_pt
     area = width * height
     image_cov = other_cov = 0.0
     largest = None  # (area, object)
@@ -86,10 +95,13 @@ def _pdf_page(path: Path, pdf: pdfium.PdfDocument, index: int, count: int) -> Pa
         except Exception:  # exotic filters: fall back to rendering the page directly
             pil = None
         if pil is not None:
+            if rotation in _UPRIGHT:
+                pil = pil.transpose(_UPRIGHT[rotation])
             raster = _to_raster(pil)
-            dpi = raster.pixels.shape[1] / (bounds_width / 72.0) if bounds_width > 0 else None
+            px_width = pil.height if rotation in (90, 270) else pil.width  # unrotated, like bounds
+            dpi = px_width / (bounds_width / 72.0) if bounds_width > 0 else None
             return Page(path, index, count, raster, dpi, False, None, "pdf")
-    return Page(path, index, count, None, 72.0, True, (width, height), "pdf")
+    return Page(path, index, count, None, 72.0, True, size_pt, "pdf")
 
 
 def _open_raster(path: Path) -> list[Page]:
